@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  aws-api-tasks
+
+  Sample SAM Template for aws-api-tasks
+
+Globals:
+  Function:
+    Timeout: 3
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+    Environment:
+      Variables:
+        TASKS_TABLE: !Ref TasksTable
+    Architectures:
+      - x86_64
+
+  Api:
+    TracingEnabled: true
+Resources:
+  GetTasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: getTasks.getTasksHandler
+      Runtime: nodejs20.x
+      Events:
+        GetTasks:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref TasksTable
+
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - getTasks.ts
+
+  CreateTasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: createTask.createTaskHandler
+      Runtime: nodejs20.x
+      Events:
+        CreateTasks:
+          Type: Api
+          Properties:
+            Path: /create
+            Method: post
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref TasksTable
+
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - createTask.ts
+
+  DeleteTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: deleteTask.deleteTaskHandler
+      Runtime: nodejs20.x
+      Events:
+        DeleteTask:
+          Type: Api
+          Properties:
+            Path: /{id}
+            Method: delete
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref TasksTable
+
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - deleteTask.ts
+
+  CheckTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/handlers/
+      Handler: checkTask.checkTaskHandler
+      Runtime: nodejs20.x
+      Events:
+        CheckTask:
+          Type: Api
+          Properties:
+            Path: /{id}
+            Method: put
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref TasksTable
+
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+        - checkTask.ts       
+
+  TasksTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: tasks
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Sub: ApplicationInsights-SAM-${AWS::StackName}
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Ref: ApplicationResourceGroup
+      AutoConfigurationEnabled: 'true'
